@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOM Daire Başkanlığı VKS Girişi</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Favicons -->
+    <meta name="theme-color" content="#563d7c">
+    <link href="css/view.css" rel="stylesheet">
+</head>
+
+<body>
+    <table class="table table-bordered" id="tableView">
+        <tr>
+    </table>
+
+    <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content bg-dark">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <img src="" id="fullImage" width="1280" height="720">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="js/jquery-3.5.1.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
+<script src="js/socket.io.js"></script>
+<script>
+    var clients = []
+    var $fullscreenImage = undefined
+    var url = new URL(window.location.href)
+    var token = url.searchParams.get("token")
+
+
+    function getNameFromIp(ipAddress) {
+        const userIndex = clients.findIndex((o) => {
+            return o.remoteAddress === ipAddress
+        })
+        if (userIndex > -1) {
+            return clients[userIndex].name
+        }
+        return false
+    }
+
+
+    const $table = $("#tableView")
+    let $lastRow = $('#tableView tr:last')
+    for (let i = 1; i <= 88; i++) {
+        $lastRow.append('<td><img class="webcam"><span class="webcamtext"></span></td>');
+        if ((i % 11) === 0 && i < 87) {
+            $table.append('<tr></tr>')
+            $lastRow = $('#tableView tr:last')
+        }
+    }
+
+    var socket = io('http://localhost:3000')
+
+    socket.on('need register', function () {
+        socket.emit('register', {"role": "viewer", "token": token})
+    })
+
+    socket.on('registerResult', function (data) {
+        if (data.result === false) {
+            location.href = 'login.html'
+        } else {
+            socket.emit('getClients')
+        }
+    })
+
+    socket.on('clientList', function (data) {
+        clients = data
+    })
+
+    socket.on('name', function (data) {
+        const userIndex = clients.findIndex((o) => {
+            return data.ipAddress === o.ipAddress
+        })
+        if (userIndex < 0) {
+            clients.push(data)
+        }
+        console.log(clients)
+    })
+
+    socket.on('stream', function (msg) {
+        for (key in msg) {
+            key_ = key.split('.').join('_')
+            let $img = $("#" + key_);
+            if ($img.length === 0) {
+                $(".webcam").each(function (i) {
+                    if ($(this).attr('id') === undefined) {
+                        $(this).attr('id', key_)
+                        return false
+                    }
+                })
+            }
+            $("#" + key_).attr('src', msg[key])
+            if ($fullscreenImage !== undefined && $fullscreenImage.attr('id') === key_) {
+                $("#fullImage").attr('src', msg[key])
+            }
+            const name = getNameFromIp(key)
+            if (name !== false) {
+                $("#" + key_).parent().find('span').html(name.ad + " " + name.soyad)
+            }
+        }
+    })
+
+    $(".webcam").on('click', function () {
+        let ip = $(this).attr('id')
+        if (ip !== undefined) {
+            ip = ip.split('_').join('.')
+            socket.emit('highres', ip)
+            $fullscreenImage = $(this)
+            $(".modal").modal('show');
+        }        
+    })
+
+    $(".modal").on('hidden.bs.modal', function (e) {
+        let ip = $fullscreenImage.attr('id')
+        ip = ip.split('_').join('.')
+        socket.emit('lowres', ip)
+        fullscreenImage = undefined        
+    })    
+</script>
+
+</html>
