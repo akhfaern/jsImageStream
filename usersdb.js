@@ -13,8 +13,9 @@ const generateAuthToken = (username) => {
         jwt.sign({ "username": username }, jwtPassword, (err, token) => {
             if (err) {
                 reject('')
-            }
-            resolve(token)
+            } else {
+                resolve(token)
+            }            
         })
     })
 }
