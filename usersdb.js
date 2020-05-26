@@ -19,19 +19,20 @@ const generateAuthToken = (username) => {
     })
 }
 
-const userLogin = async (username, password, ipAddress, callback) => {
+const userLogin = (username, password, ipAddress, callback) => {
     const userIndex = users.findIndex((o) => {
         return o.username === username && o.password === password
     })
 
     if (userIndex > -1) {
-        const token = await generateAuthToken(username)
-        users[userIndex].token = token
-        users[userIndex].ipAddress = ipAddress
-        callback(undefined, token)
-    }
-
-    callback('Kullanıcı bulunamadı', undefined)
+        generateAuthToken(username).then(token => {
+            users[userIndex].token = token
+            users[userIndex].ipAddress = ipAddress
+            callback(undefined, token)
+        }).catch(hata => { callback('jwt hatası', undefined) })
+    } else {
+        callback('Kullanıcı bulunamadı', undefined)
+    }    
 }
 
 const verifyUser = (token) => {
