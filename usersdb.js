@@ -2,18 +2,24 @@ const jwt = require('jsonwebtoken')
 const { getPersonel } = require('./personelList')
 
 let users = [
-    { "username": "282830", "password": "cem123", "token": "", "ipAddress": "" },
-    { "username": "282831", "password": "cem123", "token": "", "ipAddress": "" }
+    { "username": "mcem1", "password": "123", "token": "", "ipAddress": "" },
+    { "username": "mcem2", "password": "123", "token": "", "ipAddress": "" }
 ]
 
-const jwtPassword = 'kom282830++'
+const jwtPassword = 'secretjwtpassword'
 
-const generateAuthToken = async function (username) {
-    const token = jwt.sign({ "username": username }, jwtPassword)
-    return token
+const generateAuthToken = (username) => {
+    return new Promise((resolve, reject) => {
+        jwt.sign({ "username": username }, jwtPassword, (err, token) => {
+            if (err) {
+                reject('')
+            }
+            resolve(token)
+        })
+    })
 }
 
-const userLogin = async (username, password, ipAddress) => {
+const userLogin = async (username, password, ipAddress, callback) => {
     const userIndex = users.findIndex((o) => {
         return o.username === username && o.password === password
     })
@@ -22,10 +28,10 @@ const userLogin = async (username, password, ipAddress) => {
         const token = await generateAuthToken(username)
         users[userIndex].token = token
         users[userIndex].ipAddress = ipAddress
-        return token
+        callback(undefined, token)
     }
 
-    return ''
+    callback('Kullanıcı bulunamadı', undefined)
 }
 
 const verifyUser = (token) => {
@@ -43,8 +49,13 @@ const verifyUser = (token) => {
 }
 
 const getUser = (token) => {
-    const decoded = jwt.verify(token, jwtPassword)
-    return getPersonel(decoded.username);
+    try {
+        const decoded = jwt.verify(token, jwtPassword)
+        return getPersonel(decoded.username);
+    } catch (e) {
+        console.log('token error')
+        return ''
+    }    
 }
 
 module.exports = {

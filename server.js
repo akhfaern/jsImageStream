@@ -9,6 +9,7 @@ const {
     getUser,
     verifyUser
 } = require('./usersdb')
+const ipfix = require('./ipfix')
 
 const app = express()
 const publicDirectoryPath = path.join(__dirname, './public')
@@ -38,25 +39,19 @@ app.get('/', auth, (req, res) => {
 })
 
 app.post('/login', async (req, res) => {
-    let ipAddress = req.connection.remoteAddress;
-    //ipv4 header
-    if (ipAddress.substr(0, 7) == "::ffff:") {
-        ipAddress = ipAddress.substr(7)
-    }
-    //127.0.0.1 test
-    if (ipAddress === "::1") {
-        ipAddress = '127.0.0.1'
-    }
+    const ipAddress = ipfix.fixIp(req.connection.remoteAddress)
     const username = req.body.sicil
     const password = req.body.password
+
     try {
-        const token = await userLogin(username, password, ipAddress)
-        if (token == '') {
-            throw new Error()
-        }
-        res.send({
-            token
-        })
+        userLogin(username, password, ipAddress, (err, token) => {
+            if (err) {
+                throw new Error()
+            }
+            res.send({
+                token
+            })
+        })        
     } catch (e) {
         res.send({
             username,
