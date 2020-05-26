@@ -66,16 +66,10 @@ let clients = []
 
 io.on('connection', (socket) => {
 
-    let ipAddress = socket.request.connection.remoteAddress
+    let ipAddress = ipfix.fixIp(socket.request.connection.remoteAddress)
     let port = socket.request.connection.remotePort
 
-    if (ipAddress.substr(0, 7) == "::ffff:") {
-        ipAddress = ipAddress.substr(7)
-    }
-    if (ipAddress === "::1") {
-        ipAddress = '127.0.0.1'
-    }
-    console.log('İstemci bağlandı', ipAddress, ':', port)
+    console.log('İstemci bağlandı', ipAddress + ':' + port)
 
     socket.emit('need register')
 
@@ -109,11 +103,9 @@ io.on('connection', (socket) => {
     })
 
     socket.on('getClients', () => {
-        console.log('sending client list')
         let list = []
         clients.forEach(e => {
-            let ip =e.socket.request.connection.remoteAddress
-            ip = (ip == "::1") ? '127.0.0.1' : ip
+            let ip = ipfix.fixIp(e.socket.request.connection.remoteAddress)
             list.push({
                 "name": e.name,
                 "remoteAddress": ip,
@@ -128,18 +120,10 @@ io.on('connection', (socket) => {
 
 
     socket.on('image', (data) => {
-        // for (let i = 1; i <= 88; i++) {
-        //     images['127.0.0.' + i] = data
-        // }
         images[ipAddress] = data
         viewerSockets.forEach(v => {
             v.socket.emit('stream', images)
         })
-        //io.emit('stream', images)
-        /*
-        var d = new Date();
-        console.log('stream ok ', d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds() + "." + d.getMilliseconds())
-        */
     })
 
     socket.on('lowres', (data) => {
