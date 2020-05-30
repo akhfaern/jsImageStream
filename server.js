@@ -64,6 +64,17 @@ let images = {}
 let viewerSockets = []
 let clients = []
 
+const sendImages = () => {
+    setTimeout(() => {        
+        viewerSockets.forEach(v => {
+            v.socket.emit('stream', images)
+        })
+        sendImages()
+    }, 200);
+}
+
+sendImages()
+
 io.on('connection', (socket) => {
 
     let ipAddress = ipfix.fixIp(socket.request.connection.remoteAddress)
@@ -121,13 +132,10 @@ io.on('connection', (socket) => {
 
     socket.on('image', (data) => {
         images[ipAddress] = data
-        viewerSockets.forEach(v => {
-            v.socket.emit('stream', images)
-        })
     })
 
     socket.on('lowres', (data) => {
-        data = (data === '127.0.0.1') ? '::1' : data
+        data = (data === '127.0.0.1') ? '::1' : '::ffff:' + data
         const clientIndex = clients.findIndex((c) => {
             return c.socket.request.connection.remoteAddress === data
         })
@@ -137,7 +145,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('highres', (data) => {
-        data = (data === '127.0.0.1') ? '::1' : data
+        data = (data === '127.0.0.1') ? '::1' : '::ffff:' + data
         const clientIndex = clients.findIndex((c) => {
             return c.socket.request.connection.remoteAddress === data
         })
@@ -152,7 +160,10 @@ io.on('connection', (socket) => {
         })
         if (clientIndex > -1) {
             clients.splice(clientIndex, 1)
-            console.log("client disconnected", socket.request.connection.remotePort)
+            if (ipAddress in images) {
+                delete images[ipAddress]
+            }
+            console.log("client disconnected", ipAddress, port)
         } else {
             const clientIndex = viewerSockets.findIndex((c) => {
                 return c.socket.request.connection.remoteAddress === socket.request.connection.remoteAddress && c.socket.request.connection.remotePort === socket.request.connection.remotePort
